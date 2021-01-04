@@ -33,9 +33,8 @@ enum TrafficLightPhase
 class TrafficLight : public TrafficObject
 {
 public:
-    // constructor / desctructor
+    // constructor
     TrafficLight();
-    ~TrafficLight();
 
     // getters / setters
     TrafficLightPhase getCurrentPhase();
