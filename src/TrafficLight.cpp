@@ -5,25 +5,32 @@
 
 /* Implementation of class "MessageQueue" */
 
-/* 
 template <typename T>
 T MessageQueue<T>::receive()
 {
-    // FP.5a : The method receive should use std::unique_lock<std::mutex> and _condition.wait() 
-    // to wait for and receive new messages and pull them from the queue using move semantics. 
-    // The received object should then be returned by the receive function. 
+    // perform queue modification under the lock
+    std::unique_lock<std::mutex> uLock(_mutex);
+    _cond.wait(uLock, [this] { return !_queue.empty(); }); // pass unique lock to condition variable
+
+    // remove last vector element from queue
+    T msg = std::move(_queue.back());
+    _messages.pop_back();
+
+    return msg;
 }
 
 template <typename T>
 void MessageQueue<T>::send(T &&msg)
 {
-    // FP.4a : The method send should use the mechanisms std::lock_guard<std::mutex> 
-    // as well as _condition.notify_one() to add a new message to the queue and afterwards send a notification.
+    // perform vector modification under the lock
+    std::lock_guard<std::mutex> uLock(_mutex);
+    // add vector to queue
+    _queue.push_back(std::move(msg));
+    // notify client after pushing new Vehicle into vector
+    _cond.notify_one();
 }
-*/
 
 /* Implementation of class "TrafficLight" */
-
 
 TrafficLight::TrafficLight()
 {
@@ -59,7 +66,7 @@ void TrafficLight::cycleThroughPhases()
     // Calculate first time interval
     unsigned int intervalTime = distr(eng);
     // Initialize the stop watch for the first time outside of the infinite loop 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto stopWatchStart = std::chrono::high_resolution_clock::now();
 
     // Begin infinite loop to cycle traffic lights between red and green states
     while (true) 
@@ -67,7 +74,7 @@ void TrafficLight::cycleThroughPhases()
         // Sleep for 1 ms to prevent over stressing the CPU
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         // Get time since last update using duration method in chrono library
-        unsigned int timeInterval = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
+        unsigned int timeInterval = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - stopWatchStart).count();
 
         if (timeInterval >= intervalTime) 
         {
@@ -86,7 +93,7 @@ void TrafficLight::cycleThroughPhases()
             // Calculate next time interval
             intervalTime = distr(eng);
             // Reset stopwatch
-            start = std::chrono::high_resolution_clock::now();
+            stopWatchStart = std::chrono::high_resolution_clock::now();
         } 
     }
 }
