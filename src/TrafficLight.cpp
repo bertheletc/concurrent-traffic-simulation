@@ -1,5 +1,6 @@
 #include <iostream>
 #include <random>
+#include <chrono>
 #include "TrafficLight.h"
 
 /* Implementation of class "MessageQueue" */
@@ -43,14 +44,49 @@ TrafficLightPhase TrafficLight::getCurrentPhase()
 
 void TrafficLight::simulate()
 {
-    // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread when the public method „simulate“ is called. To do this, use the thread queue in the base class. 
+    // launch traffic light phase cycling in a thread
+    threads.emplace_back(std::thread(&TrafficLight::cycleThroughPhases, this));
 }
 
-// virtual function which is executed in a thread
 void TrafficLight::cycleThroughPhases()
 {
-    // FP.2a : Implement the function with an infinite loop that measures the time between two loop cycles 
-    // and toggles the current phase of the traffic light between red and green and sends an update method 
-    // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
-    // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
+    // Set up random number generation similar to how its done in Vehicle.cpp
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    // Distribution to represent time between 4 and 6 seconds in ms
+    std::uniform_int_distribution<> distr(4000, 6000);
+    
+    // Calculate first time interval
+    unsigned int intervalTime = distr(eng);
+    // Initialize the stop watch for the first time outside of the infinite loop 
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Begin infinite loop to cycle traffic lights between red and green states
+    while (true) 
+    {
+        // Sleep for 1 ms to prevent over stressing the CPU
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // Get time since last update using duration method in chrono library
+        unsigned int timeInterval = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
+
+        if (timeInterval >= intervalTime) 
+        {
+            if (_currentPhase == TrafficLightPhase::red) 
+            {
+                // switch state from red to green
+                _currentPhase = TrafficLightPhase::green;
+            }
+            else 
+            {
+                // switch state from green to red
+                _currentPhase = TrafficLightPhase::red; 
+            }
+            // Send update message to queue
+            _phaseQueue.send(std::move(_currentPhase));
+            // Calculate next time interval
+            intervalTime = distr(eng);
+            // Reset stopwatch
+            start = std::chrono::high_resolution_clock::now();
+        } 
+    }
 }
