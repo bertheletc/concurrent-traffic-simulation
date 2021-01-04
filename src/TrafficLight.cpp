@@ -14,7 +14,7 @@ T MessageQueue<T>::receive()
 
     // remove last vector element from queue
     T msg = std::move(_queue.back());
-    _messages.pop_back();
+    _queue.pop_back();
 
     return msg;
 }
@@ -39,9 +39,17 @@ TrafficLight::TrafficLight()
 
 void TrafficLight::waitForGreen()
 {
-    // FP.5b : add the implementation of the method waitForGreen, in which an infinite while-loop 
-    // runs and repeatedly calls the receive function on the message queue. 
-    // Once it receives TrafficLightPhase::green, the method returns.
+    while (true)
+    {
+        // repeatedly call message queue receive method
+        TrafficLightPhase phase = _phaseQueue.receive();
+        
+        if (phase == TrafficLightPhase::green)
+        {
+            // once a green light is received, return from the method
+            return;
+        }
+    }
 }
 
 TrafficLightPhase TrafficLight::getCurrentPhase()
