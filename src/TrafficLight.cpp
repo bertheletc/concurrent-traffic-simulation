@@ -14,7 +14,8 @@ T MessageQueue<T>::receive()
 
     // remove last vector element from queue
     T msg = std::move(_queue.back());
-    _queue.pop_back();
+    //_queue.pop_back();
+    _queue.clear();
 
     return msg;
 }
